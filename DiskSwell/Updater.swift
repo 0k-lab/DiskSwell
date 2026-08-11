@@ -219,18 +219,14 @@ struct UpdateService: Sendable {
 
     func latestRelease() async throws -> UpdateRelease {
         for url in DiskSwellReleaseLocation.latestReleaseURLs {
-            let (data, response) = try await URLSession.shared.data(for: request(url))
+            var latestRequest = request(url)
+            latestRequest.httpMethod = "HEAD"
+            let (_, response) = try await URLSession.shared.data(for: latestRequest)
             if (response as? HTTPURLResponse)?.statusCode == 404 { continue }
             try validate(response)
-            let payload = try JSONDecoder().decode(GitHubRelease.self, from: data)
-            guard let version = ReleaseVersion(payload.tagName) else { throw UpdateError.invalidRelease }
-            guard let package = payload.assets.first(where: { $0.name == "DiskSwell.pkg" }),
-                  let checksum = payload.assets.first(where: { $0.name == "DiskSwell.pkg.sha256" }),
-                  (1...100_000_000).contains(package.size),
-                  (1...4_096).contains(checksum.size),
-                  DiskSwellReleaseLocation.isTrustedAssetURL(package.downloadURL),
-                  DiskSwellReleaseLocation.isTrustedAssetURL(checksum.downloadURL) else { throw UpdateError.missingAssets }
-            return UpdateRelease(version: version, packageURL: package.downloadURL, checksumURL: checksum.downloadURL)
+            guard let responseURL = response.url,
+                  let assets = DiskSwellReleaseLocation.assets(for: responseURL) else { throw UpdateError.invalidRelease }
+            return UpdateRelease(version: assets.version, packageURL: assets.packageURL, checksumURL: assets.checksumURL)
         }
         throw UpdateError.noPublishedRelease
     }
@@ -264,7 +260,6 @@ struct UpdateService: Sendable {
 
     private func request(_ url: URL) -> URLRequest {
         var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 30)
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("DiskSwell/\(currentVersion)", forHTTPHeaderField: "User-Agent")
         return request
     }
@@ -323,28 +318,6 @@ struct UpdateRelease: Sendable {
     let version: ReleaseVersion
     let packageURL: URL
     let checksumURL: URL
-}
-
-private struct GitHubRelease: Decodable {
-    struct Asset: Decodable {
-        let name: String
-        let downloadURL: URL
-        let size: Int
-
-        enum CodingKeys: String, CodingKey {
-            case name
-            case downloadURL = "browser_download_url"
-            case size
-        }
-    }
-
-    let tagName: String
-    let assets: [Asset]
-
-    enum CodingKeys: String, CodingKey {
-        case tagName = "tag_name"
-        case assets
-    }
 }
 
 private enum UpdateError: LocalizedError {

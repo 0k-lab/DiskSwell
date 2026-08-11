@@ -46,7 +46,17 @@ public enum DiskSwellReleaseLocation {
     public static let owners = ["0k-lab", "kricha-lab"]
 
     public static var latestReleaseURLs: [URL] {
-        owners.compactMap { URL(string: "https://api.github.com/repos/\($0)/DiskSwell/releases/latest") }
+        owners.compactMap { URL(string: "https://github.com/\($0)/DiskSwell/releases/latest") }
+    }
+
+    public static func assets(for releaseURL: URL) -> (version: ReleaseVersion, packageURL: URL, checksumURL: URL)? {
+        let path = releaseURL.path.split(separator: "/").map(String.init)
+        guard releaseURL.scheme == "https", releaseURL.host?.lowercased() == "github.com",
+              path.count == 5, owners.contains(path[0]), path[1...3] == ["DiskSwell", "releases", "tag"],
+              let version = ReleaseVersion(path[4]),
+              let packageURL = URL(string: "https://github.com/\(path[0])/DiskSwell/releases/download/\(path[4])/DiskSwell.pkg"),
+              let checksumURL = URL(string: "https://github.com/\(path[0])/DiskSwell/releases/download/\(path[4])/DiskSwell.pkg.sha256") else { return nil }
+        return (version, packageURL, checksumURL)
     }
 
     public static func isTrustedAssetURL(_ url: URL) -> Bool {

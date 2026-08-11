@@ -60,9 +60,14 @@ func updateReleaseValidation() {
 @Test("Release migration prefers the new organization and trusts both namespaces")
 func releaseOrganizationMigration() {
     #expect(DiskSwellReleaseLocation.latestReleaseURLs.map(\.absoluteString) == [
-        "https://api.github.com/repos/0k-lab/DiskSwell/releases/latest",
-        "https://api.github.com/repos/kricha-lab/DiskSwell/releases/latest",
+        "https://github.com/0k-lab/DiskSwell/releases/latest",
+        "https://github.com/kricha-lab/DiskSwell/releases/latest",
     ])
+    let assets = DiskSwellReleaseLocation.assets(for: URL(string: "https://github.com/0k-lab/DiskSwell/releases/tag/v1.2.3")!)
+    #expect(assets?.version == ReleaseVersion("1.2.3"))
+    #expect(assets?.packageURL.absoluteString == "https://github.com/0k-lab/DiskSwell/releases/download/v1.2.3/DiskSwell.pkg")
+    #expect(assets?.checksumURL.absoluteString == "https://github.com/0k-lab/DiskSwell/releases/download/v1.2.3/DiskSwell.pkg.sha256")
+    #expect(DiskSwellReleaseLocation.assets(for: URL(string: "https://example.com/0k-lab/DiskSwell/releases/tag/v1.2.3")!) == nil)
     #expect(DiskSwellReleaseLocation.isTrustedAssetURL(URL(string: "https://github.com/0k-lab/DiskSwell/releases/download/v1.2.3/DiskSwell.pkg")!))
     #expect(DiskSwellReleaseLocation.isTrustedAssetURL(URL(string: "https://github.com/kricha-lab/DiskSwell/releases/download/v1.2.3/DiskSwell.pkg")!))
     #expect(!DiskSwellReleaseLocation.isTrustedAssetURL(URL(string: "https://github.com/ok-lab/DiskSwell/releases/download/v1.2.3/DiskSwell.pkg")!))
