@@ -16,9 +16,6 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Install SwiftLint
-        run: brew install swiftlint
-
       - name: Validate pull-request title
         if: github.event_name == 'pull_request'
         env:
@@ -30,6 +27,9 @@ jobs:
             echo "Use a Conventional Commit title, for example: feat: show responsible application" >&2
             exit 1
           fi
+
+      - name: Install SwiftLint
+        run: brew install swiftlint
 
       - name: Lint
         run: swiftlint lint --strict
