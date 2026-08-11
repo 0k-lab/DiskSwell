@@ -3,6 +3,7 @@ import DiskSwellCore
 import SwiftUI
 
 struct SettingsView: View {
+    @Environment(\.openWindow) private var openWindow
     @ObservedObject var model: AppModel
     @State private var confirmsReset = false
 
@@ -37,6 +38,11 @@ struct SettingsView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+
+                Button(model.snapshot.accessIssues.contains(where: { $0.kind == .permissionDenied }) ? "Fix Access…" : "Review Access…") {
+                    openWindow(id: "access")
+                    NSApplication.shared.activate(ignoringOtherApps: true)
+                }
 
                 HStack {
                     Button(model.auditState == .running ? "Running Audit…" : "Run Audit Now", action: model.runAudit)

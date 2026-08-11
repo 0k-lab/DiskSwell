@@ -166,7 +166,7 @@ SQLite failures are logged in Debug and do not stop monitoring.
 
 App Sandbox is disabled for the current direct-distribution assumption; Hardened Runtime remains enabled. TCC still applies. DiskSwell does not automatically request or open System Settings for Full Disk Access.
 
-Each configured root is checked independently. Failures are tagged as `missing`, `permissionDenied`, or `unavailable` and reported in menu status. A narrower inaccessible Safari container makes status `Monitoring (limited access)` but does not stop accessible roots or free-space monitoring. Access is retried on the 30-minute safety interval, and a root that becomes available is added without relaunching. Granting additional macOS privacy permission may be necessary for Safari/WebKit website data on some OS configurations; DiskSwell explains the inaccessible path and does not repeatedly prompt.
+Each configured root is checked independently. Failures are tagged as `missing`, `permissionDenied`, or `unavailable` and reported in menu status. A missing child already covered by an accessible watched root is ignored until it appears. A narrower inaccessible Safari container makes status `Monitoring (limited access)` but does not stop accessible roots or free-space monitoring. Access is retried on the 30-minute safety interval, and a root that becomes available is added without relaunching. When macOS denies access, **Fix Access…** opens a small assistant with functional access status, blocked locations, privacy context, exact Full Disk Access steps, and user-initiated System Settings/Finder actions. It never grants access or repeatedly prompts.
 
 Notification permission is requested only when the first anomaly needs delivery. A denial or failed request is not retried during that app run. Granting permission later in System Settings takes effect on the next anomaly. Full Disk Access, if the user chooses to grant it, takes effect at the next access retry or after relaunch.
 
@@ -204,7 +204,7 @@ It writes `process.csv` and `diagnostics.log` to a new timestamped directory, re
 
 ## Troubleshooting
 
-- `Monitoring (limited access)`: open the menu to see the first inaccessible root. Grant access manually only if desired, then wait for the retry or relaunch.
+- `Monitoring (limited access)`: open the menu to see the first inaccessible root. Use **Fix Access…** for exact steps, grant DiskSwell access, then relaunch it.
 - No notifications: check **System Settings → Notifications → DiskSwell**. DiskSwell never loops permission prompts.
 - High CPU: inspect the dirty/tracked counters using the soak procedure, then attach Time Profiler to the Release PID.
 - History errors: quit DiskSwell, run `sqlite3 ~/Library/Application\ Support/DiskSwell/history.sqlite3 'PRAGMA integrity_check;'`, and preserve the database before any manual repair.
