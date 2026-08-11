@@ -2,10 +2,10 @@ cask "diskswell" do
   version "@VERSION@"
   sha256 "@SHA256@"
 
-  url "https://github.com/kricha-lab/DiskSwell/releases/download/v#{version}/DiskSwell.pkg"
+  url "https://github.com/0k-lab/DiskSwell/releases/download/v#{version}/DiskSwell.pkg"
   name "DiskSwell"
   desc "Detect abnormal disk-usage growth"
-  homepage "https://github.com/kricha-lab/DiskSwell"
+  homepage "https://github.com/0k-lab/DiskSwell"
 
   depends_on macos: ">= :sonoma"
 

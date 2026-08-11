@@ -6,7 +6,7 @@ Only the latest published DiskSwell release receives security fixes. Until the f
 
 ## Reporting a vulnerability
 
-Do not open a public issue for a suspected vulnerability. Use **Security → Report a vulnerability** in the [DiskSwell GitHub repository](https://github.com/kricha-lab/DiskSwell/security/advisories/new) to submit a private report.
+Do not open a public issue for a suspected vulnerability. Use **Security → Report a vulnerability** in the [DiskSwell GitHub repository](https://github.com/0k-lab/DiskSwell/security/advisories/new) to submit a private report.
 
 Include the affected version, macOS version, impact, reproduction steps, and any suggested mitigation. The maintainers will coordinate disclosure through the private advisory and publish a fix before public details when practical.
 
