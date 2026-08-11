@@ -657,7 +657,12 @@ public actor MonitoringEngine {
 
     private func refreshMonitoringRoots() {
         let previousIssues = accessIssues
-        let refreshedIssues = Dictionary(uniqueKeysWithValues: configuredRoots.compactMap { root in accessIssue(for: root).map { (root, $0) } })
+        let checkedIssues = Dictionary(uniqueKeysWithValues: configuredRoots.compactMap { root in accessIssue(for: root).map { (root, $0) } })
+        let refreshedIssues = checkedIssues.filter { root, issue in
+            issue.kind != .missing || !configuration.normalizedRoots.contains { monitoredRoot in
+                monitoredRoot != root && checkedIssues[monitoredRoot] == nil && PathRules.contains(monitoredRoot, root)
+            }
+        }
         diagnostics.errorCount += refreshedIssues.filter { previousIssues[$0.key] != $0.value }.count
         diagnostics.recoveryCount += previousIssues.keys.filter { refreshedIssues[$0] == nil }.count
         accessIssues = refreshedIssues

@@ -54,7 +54,7 @@ public struct TargetedFileInspector: Sendable {
         let nsError = error as NSError
         let permissionCodes = [NSFileReadNoPermissionError, NSFileWriteNoPermissionError]
         guard (nsError.domain == NSCocoaErrorDomain && permissionCodes.contains(nsError.code)) || (nsError.domain == NSPOSIXErrorDomain && [Int(EACCES), Int(EPERM)].contains(nsError.code)) else { return nil }
-        return AccessIssue(root: path, kind: .permissionDenied, message: "DiskSwell cannot access this location. Additional macOS privacy permission may be required.")
+        return AccessIssue(root: path, kind: .permissionDenied, message: "macOS denied access. Grant DiskSwell Full Disk Access, then relaunch the app.")
     }
 
     private func inspectDirectory(_ root: URL, maxEntries: Int, maxDepth: Int, excluding excludedRoots: [String]) -> InspectionResult {

@@ -513,8 +513,8 @@ func engineTrackedStateBound() async {
     #expect(diagnostics.trackedItemEvictions == 7)
 }
 
-@Test("One inaccessible root degrades status without stopping another root")
-func inaccessibleRootDegradesGracefully() async {
+@Test("A missing child covered by an accessible root does not degrade monitoring")
+func coveredMissingRootIsIgnored() async {
     let root = temporaryDirectory()
     defer { try? FileManager.default.removeItem(at: root) }
     try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -523,9 +523,17 @@ func inaccessibleRootDegradesGracefully() async {
     let engine = MonitoringEngine(configuration: config, history: InMemoryHistoryStore(), notifications: RecordingNotifications())
     await engine.start()
     let snapshot = await engine.snapshot()
-    #expect(snapshot.status == .degraded)
-    #expect(snapshot.accessIssues.contains(where: { $0.root == missing && $0.kind == .missing }))
+    #expect(snapshot.status == .monitoring)
+    #expect(snapshot.accessIssues.isEmpty)
     await engine.stop()
+}
+
+@Test("Permission errors explain the required Full Disk Access permission")
+func permissionErrorIsActionable() {
+    let error = NSError(domain: NSPOSIXErrorDomain, code: Int(EPERM))
+    let issue = TargetedFileInspector.permissionIssue(error, path: "/private")
+    #expect(issue?.kind == .permissionDenied)
+    #expect(issue?.message.contains("Full Disk Access") == true)
 }
 
 @Test("A root that appears later is monitored without restarting the app")

@@ -7,6 +7,7 @@ import SwiftUI
 @main
 struct DiskSwellApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @Environment(\.openWindow) private var openWindow
     @Environment(\.openSettings) private var openSettings
     @StateObject private var model = AppModel()
     @State private var currentAlertExpanded = false
@@ -56,7 +57,13 @@ struct DiskSwellApp: App {
                     Divider()
                     Text("Monitoring unavailable for:").font(.caption)
                     Text((issue.root as NSString).abbreviatingWithTildeInPath).lineLimit(2)
-                    Text(issue.message).font(.caption).foregroundStyle(.secondary)
+                    Text(issue.message).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    if model.snapshot.accessIssues.contains(where: { $0.kind == .permissionDenied }) {
+                        Button("Fix Access…") {
+                            openWindow(id: "access")
+                            NSApplication.shared.activate(ignoringOtherApps: true)
+                        }
+                    }
                 }
 
                 Divider()
@@ -87,6 +94,11 @@ struct DiskSwellApp: App {
             .frame(width: 340)
         }
         .menuBarExtraStyle(.window)
+
+        Window("DiskSwell Access", id: "access") {
+            AccessAssistantView(model: model)
+        }
+        .windowResizability(.contentSize)
 
         Settings { SettingsView(model: model) }
     }
@@ -219,6 +231,153 @@ struct DiskSwellApp: App {
 
     private static func showInFinder(_ path: String) {
         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+    }
+}
+
+private struct AccessAssistantView: View {
+    @ObservedObject var model: AppModel
+    @State private var notificationAuthorization: UNAuthorizationStatus?
+
+    private var permissionIssues: [AccessIssue] {
+        model.snapshot.accessIssues.filter { $0.kind == .permissionDenied }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("DiskSwell Access").font(.title2.bold())
+            Text("Review the access DiskSwell uses to detect storage growth.")
+                .foregroundStyle(.secondary)
+
+            protectedLocationsStatus
+
+            if !permissionIssues.isEmpty {
+                Text("DiskSwell only observes storage growth. It never deletes, modifies, or uploads monitored data.")
+                    .font(.callout).foregroundStyle(.secondary)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Blocked locations").font(.headline)
+                    ForEach(permissionIssues.prefix(4), id: \.root) { issue in
+                        Label((issue.root as NSString).abbreviatingWithTildeInPath, systemImage: "folder")
+                            .lineLimit(2).textSelection(.enabled)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("How to fix access").font(.headline)
+                    Text("1. Open Full Disk Access settings.")
+                    Text("2. Enable DiskSwell, or press + and choose DiskSwell.")
+                    Text("3. Accept macOS's Quit & Reopen prompt.")
+                }
+
+                HStack {
+                    Button("Show DiskSwell in Finder", action: Self.revealApp)
+                    Spacer()
+                    Button("Open Full Disk Access Settings", action: Self.openFullDiskAccessSettings)
+                        .keyboardShortcut(.defaultAction)
+                }
+            }
+
+            Divider()
+            notificationStatus
+        }
+        .padding(20)
+        .frame(width: 480)
+        .task {
+            notificationAuthorization = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+        }
+    }
+
+    @ViewBuilder
+    private var protectedLocationsStatus: some View {
+        if !permissionIssues.isEmpty {
+            statusRow(
+                symbol: "exclamationmark.circle.fill",
+                color: .red,
+                title: "Protected Locations",
+                status: "Needs attention",
+                detail: "Full Disk Access is recommended for complete Library, Safari, and application-container monitoring."
+            )
+        } else if model.snapshot.status == .ready || model.snapshot.status == .stopped {
+            statusRow(
+                symbol: "minus.circle.fill",
+                color: .secondary,
+                title: "Protected Locations",
+                status: "Not checked",
+                detail: "Enable monitoring to check access to configured protected locations."
+            )
+        } else {
+            statusRow(
+                symbol: "checkmark.circle.fill",
+                color: .green,
+                title: "Protected Locations",
+                status: "Accessible",
+                detail: "No macOS privacy denial was detected for configured locations."
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var notificationStatus: some View {
+        switch notificationAuthorization ?? .notDetermined {
+        case .authorized, .provisional, .ephemeral:
+            statusRow(
+                symbol: "checkmark.circle.fill",
+                color: .green,
+                title: "Notifications (Optional)",
+                status: "Allowed",
+                detail: "DiskSwell may deliver disk-growth alerts."
+            )
+        case .denied:
+            statusRow(
+                symbol: "xmark.circle.fill",
+                color: .red,
+                title: "Notifications (Optional)",
+                status: "Disabled",
+                detail: "Alerts are blocked in System Settings; monitoring still works."
+            )
+        case .notDetermined:
+            statusRow(
+                symbol: "circle",
+                color: .secondary,
+                title: "Notifications (Optional)",
+                status: "Not requested",
+                detail: "DiskSwell asks only when its first alert needs delivery."
+            )
+        @unknown default:
+            statusRow(
+                symbol: "questionmark.circle.fill",
+                color: .secondary,
+                title: "Notifications (Optional)",
+                status: "Unknown",
+                detail: "Notification access could not be determined."
+            )
+        }
+    }
+
+    private func statusRow(symbol: String, color: Color, title: String, status: String, detail: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: symbol).font(.title2).foregroundStyle(color)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack {
+                    Text(title).fontWeight(.semibold)
+                    Spacer()
+                    Text(status).font(.callout.weight(.medium)).foregroundStyle(color)
+                }
+                Text(detail).font(.callout).foregroundStyle(.secondary)
+            }
+        }
+        .padding(12)
+        .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    private static func revealApp() {
+        NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL])
+    }
+
+    private static func openFullDiskAccessSettings() {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_AllFiles") else { return }
+        NSWorkspace.shared.open(url)
     }
 }
 
