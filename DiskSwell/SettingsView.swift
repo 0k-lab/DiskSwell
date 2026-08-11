@@ -9,16 +9,16 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section("General") {
-                Toggle("Launch at Login", isOn: Binding(get: { model.launchAtLoginEnabled }, set: model.setLaunchAtLogin))
+                Toggle("Launch at Login", isOn: Binding(get: { model.launchAtLoginEnabled }, set: { model.setLaunchAtLogin($0) }))
                 if let message = model.launchAtLoginMessage { help(message) }
 
-                Toggle("Show DiskSwell in Dock", isOn: Binding(get: { model.preferences.showInDock }, set: model.setShowInDock))
+                Toggle("Show DiskSwell in Dock", isOn: Binding(get: { model.preferences.showInDock }, set: { model.setShowInDock($0) }))
                 if let message = model.dockMessage { help(message) }
             }
 
             Section("Monitoring") {
-                Toggle("Monitoring Enabled", isOn: Binding(get: { model.preferences.monitoringEnabled }, set: model.setMonitoringEnabled))
-                Toggle("Notifications", isOn: Binding(get: { model.preferences.notificationsEnabled }, set: model.setNotificationsEnabled))
+                Toggle("Monitoring Enabled", isOn: Binding(get: { model.preferences.monitoringEnabled }, set: { model.setMonitoringEnabled($0) }))
+                Toggle("Notifications", isOn: Binding(get: { model.preferences.notificationsEnabled }, set: { model.setNotificationsEnabled($0) }))
                 Text("Turning notifications off does not stop detection or history.").font(.caption).foregroundStyle(.secondary)
 
                 VStack(alignment: .leading, spacing: 8) {
@@ -51,13 +51,13 @@ struct SettingsView: View {
                     controller: model.updater,
                     automaticallyChecks: Binding(
                         get: { model.preferences.automaticallyChecksForUpdates },
-                        set: model.setAutomaticallyChecksForUpdates
+                        set: { model.setAutomaticallyChecksForUpdates($0) }
                     )
                 )
             }
 
             Section("Advanced") {
-                Toggle("Enable Diagnostics", isOn: Binding(get: { model.preferences.diagnosticsEnabled }, set: model.setDiagnosticsEnabled))
+                Toggle("Enable Diagnostics", isOn: Binding(get: { model.preferences.diagnosticsEnabled }, set: { model.setDiagnosticsEnabled($0) }))
                 if model.preferences.diagnosticsEnabled {
                     diagnostics
                     HStack {
