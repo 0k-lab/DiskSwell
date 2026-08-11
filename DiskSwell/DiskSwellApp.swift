@@ -176,7 +176,7 @@ struct DiskSwellApp: App {
     private func summary(source: SourceClassification, path: String, size: Int64, status: String?, expanded: Bool) -> some View {
         HStack(spacing: 8) {
             Group {
-                if let icon = Self.applicationIcon(for: path) {
+                if let icon = Self.applicationIcon(for: source, path: path) {
                     Image(nsImage: icon).resizable().scaledToFit()
                 } else {
                     Image(systemName: sourceSymbol(source))
@@ -205,10 +205,17 @@ struct DiskSwellApp: App {
         .contentShape(Rectangle())
     }
 
-    private static func applicationIcon(for path: String) -> NSImage? {
-        guard let identifier = SourceAttribution.applicationBundleIdentifier(for: path),
-              let application = NSWorkspace.shared.urlForApplication(withBundleIdentifier: identifier) else { return nil }
-        return NSWorkspace.shared.icon(forFile: application.path)
+    private static func applicationIcon(for source: SourceClassification, path: String) -> NSImage? {
+        let workspace = NSWorkspace.shared
+        let identified = SourceAttribution.applicationBundleIdentifier(for: path)
+            .flatMap { workspace.urlForApplication(withBundleIdentifier: $0) }
+        let running: URL? = if case let .application(name, _) = source {
+            workspace.runningApplications.first { $0.localizedName == name }?.bundleURL
+        } else {
+            nil
+        }
+        guard let application = identified ?? running else { return nil }
+        return workspace.icon(forFile: application.path)
     }
 
     private func sourceTitle(_ source: SourceClassification) -> String {
