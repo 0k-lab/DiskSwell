@@ -1,0 +1,73 @@
+name: DiskSwell
+
+options:
+  bundleIdPrefix: com.diskswell
+  createIntermediateGroups: true
+  deploymentTarget:
+    macOS: "14.0"
+
+settings:
+  base:
+    SWIFT_VERSION: 6.0
+    ENABLE_HARDENED_RUNTIME: YES
+    CLANG_ENABLE_MODULES: YES
+    MARKETING_VERSION: 1.0.0
+    CURRENT_PROJECT_VERSION: 1
+  configs:
+    Debug:
+      SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+    Release:
+      SWIFT_COMPILATION_MODE: wholemodule
+
+targets:
+  DiskSwellCore:
+    type: framework
+    platform: macOS
+    sources: DiskSwellCore
+    dependencies:
+      - sdk: libsqlite3.tbd
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.diskswell.DiskSwellCore
+        PRODUCT_NAME: DiskSwellCore
+        GENERATE_INFOPLIST_FILE: YES
+        SKIP_INSTALL: YES
+
+  DiskSwell:
+    type: application
+    platform: macOS
+    sources: DiskSwell
+    dependencies:
+      - target: DiskSwellCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.diskswell.DiskSwell
+        PRODUCT_NAME: DiskSwell
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: DiskSwell
+        INFOPLIST_KEY_NSHumanReadableCopyright: Copyright (c) 2026 kRicha
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
+        INFOPLIST_KEY_LSUIElement: YES
+        ENABLE_APP_SANDBOX: NO
+
+  DiskSwellCoreTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources: DiskSwellCoreTests
+    dependencies:
+      - target: DiskSwellCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.diskswell.DiskSwellCoreTests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  DiskSwell:
+    build:
+      targets:
+        DiskSwell: all
+        DiskSwellCore: all
+        DiskSwellCoreTests: [test]
+    test:
+      targets:
+        - DiskSwellCoreTests

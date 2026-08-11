@@ -1,0 +1,16 @@
+.DS_Store
+DerivedData/
+.build/
+build/
+*.xcarchive
+*.xcresult
+*.dSYM
+*.xcuserstate
+xcuserdata/
+.capture/
+dist/
+soak-*/
+*.p12
+*.p8
+.env
+.env.*

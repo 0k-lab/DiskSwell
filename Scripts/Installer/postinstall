@@ -1,0 +1,15 @@
+#!/bin/zsh
+
+app="/Applications/DiskSwell.app"
+[[ -d "$app" ]] || exit 0
+
+console_user="$(/usr/bin/stat -f '%Su' /dev/console 2>/dev/null)" || exit 0
+case "$console_user" in
+    ""|root|loginwindow) exit 0 ;;
+esac
+console_uid="$(/usr/bin/id -u "$console_user" 2>/dev/null)" || exit 0
+
+/usr/bin/killall -TERM -u "$console_user" DiskSwell >/dev/null 2>&1 || true
+/bin/sleep 1
+/bin/launchctl asuser "$console_uid" /usr/bin/sudo -u "$console_user" /usr/bin/open -a "$app" >/dev/null 2>&1 || true
+exit 0
