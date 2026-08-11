@@ -1,0 +1,17 @@
+included:
+  - DiskSwell
+  - DiskSwellCore
+  - DiskSwellCoreTests
+
+only_rules:
+  - duplicate_imports
+  - empty_count
+  - force_cast
+  - force_try
+  - trailing_newline
+  - trailing_semicolon
+  - unused_closure_parameter
+  - unused_control_flow_label
+  - unused_enumerated
+  - unused_optional_binding
+  - unused_setter_value

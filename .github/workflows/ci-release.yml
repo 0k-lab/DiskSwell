@@ -1,0 +1,224 @@
+name: CI and Release
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Tests and lint
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      - name: Validate pull-request title
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        shell: bash
+        run: |
+          pattern='^(feat|fix|perf|refactor|docs|style|test|build|ci|chore|revert)(\([[:alnum:]_.-]+\))?!?: .+'
+          if [[ ! "$PR_TITLE" =~ $pattern ]]; then
+            echo "Use a Conventional Commit title, for example: feat: show responsible application" >&2
+            exit 1
+          fi
+
+      - name: Lint
+        run: swiftlint lint --strict
+
+      - name: Test
+        run: >-
+          xcodebuild
+          -project DiskSwell.xcodeproj
+          -scheme DiskSwell
+          -destination 'platform=macOS'
+          CODE_SIGNING_ALLOWED=NO
+          test
+
+  release-please:
+    name: Prepare release
+    if: github.event_name == 'push'
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      should_publish: ${{ steps.state.outputs.should_publish }}
+      assets_present: ${{ steps.state.outputs.assets_present }}
+      tag_name: ${{ steps.state.outputs.tag_name }}
+      version: ${{ steps.state.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Create or update release PR
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - name: Find release for this commit
+        id: state
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          CREATED_TAG: ${{ steps.release.outputs.tag_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_tag="$CREATED_TAG"
+          if [[ -z "$release_tag" ]]; then
+            release_tag="$(git describe --tags --exact-match --match 'v[0-9]*' 2>/dev/null || true)"
+          fi
+
+          if [[ -z "$release_tag" ]] || ! gh release view "$release_tag" >/dev/null 2>&1; then
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          version="${release_tag#v}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Unexpected release tag: $release_tag" >&2
+            exit 1
+          fi
+
+          asset_names="$(gh release view "$release_tag" --json assets --jq '.assets[].name')"
+          assets_present=false
+          if grep -Fxq 'DiskSwell.pkg' <<< "$asset_names" && grep -Fxq 'DiskSwell.pkg.sha256' <<< "$asset_names"; then
+            assets_present=true
+          fi
+
+          {
+            echo "should_publish=true"
+            echo "assets_present=$assets_present"
+            echo "tag_name=$release_tag"
+            echo "version=$version"
+          } >> "$GITHUB_OUTPUT"
+
+  publish:
+    name: Sign and publish
+    if: needs.release-please.outputs.should_publish == 'true'
+    needs: [checks, release-please]
+    runs-on: macos-15
+    permissions:
+      contents: write
+    env:
+      DEVELOPMENT_TEAM: ${{ vars.APPLE_TEAM_ID }}
+      NOTARY_PROFILE: DiskSwell-ci
+      GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+      MARKETING_VERSION: ${{ needs.release-please.outputs.version }}
+      TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Import signing and notarization credentials
+        if: needs.release-please.outputs.assets_present != 'true'
+        env:
+          APPLICATION_P12: ${{ secrets.DEVELOPER_ID_APPLICATION_P12_BASE64 }}
+          APPLICATION_PASSWORD: ${{ secrets.DEVELOPER_ID_APPLICATION_P12_PASSWORD }}
+          INSTALLER_P12: ${{ secrets.DEVELOPER_ID_INSTALLER_P12_BASE64 }}
+          INSTALLER_PASSWORD: ${{ secrets.DEVELOPER_ID_INSTALLER_P12_PASSWORD }}
+          NOTARY_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 }}
+          NOTARY_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          keychain_password="$(openssl rand -hex 32)"
+          keychain_path="$RUNNER_TEMP/DiskSwell.keychain-db"
+          application_p12="$RUNNER_TEMP/DeveloperIDApplication.p12"
+          installer_p12="$RUNNER_TEMP/DeveloperIDInstaller.p12"
+          notary_key="$RUNNER_TEMP/AuthKey.p8"
+
+          printf '%s' "$APPLICATION_P12" | base64 --decode > "$application_p12"
+          printf '%s' "$INSTALLER_P12" | base64 --decode > "$installer_p12"
+          printf '%s' "$NOTARY_KEY" | base64 --decode > "$notary_key"
+
+          security create-keychain -p "$keychain_password" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security unlock-keychain -p "$keychain_password" "$keychain_path"
+          security default-keychain -s "$keychain_path"
+          security list-keychains -d user -s "$keychain_path"
+          security import "$application_p12" -k "$keychain_path" -P "$APPLICATION_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security import "$installer_p12" -k "$keychain_path" -P "$INSTALLER_PASSWORD" -T /usr/bin/productbuild -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$keychain_path"
+
+          xcrun notarytool store-credentials "$NOTARY_PROFILE" \
+            --key "$notary_key" \
+            --key-id "$NOTARY_KEY_ID" \
+            --issuer "$NOTARY_ISSUER_ID" \
+            --keychain "$keychain_path"
+
+          build_number=$((1000 + $(git rev-list --count HEAD)))
+          echo "NOTARY_KEYCHAIN=$keychain_path" >> "$GITHUB_ENV"
+          echo "CURRENT_PROJECT_VERSION=$build_number" >> "$GITHUB_ENV"
+
+      - name: Build signed and notarized package
+        if: needs.release-please.outputs.assets_present != 'true'
+        run: Scripts/package-release.sh
+
+      - name: Upload release assets
+        if: needs.release-please.outputs.assets_present != 'true'
+        run: gh release upload "$TAG_NAME" dist/DiskSwell.pkg dist/DiskSwell.pkg.sha256 --clobber
+
+      - name: Download existing checksum
+        if: needs.release-please.outputs.assets_present == 'true'
+        run: |
+          mkdir -p dist
+          gh release download "$TAG_NAME" --pattern DiskSwell.pkg.sha256 --dir dist --clobber
+
+      - name: Check out Homebrew tap
+        uses: actions/checkout@v4
+        with:
+          repository: kricha-lab/homebrew-tap
+          token: ${{ secrets.RELEASE_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update Homebrew cask
+        env:
+          VERSION: ${{ needs.release-please.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          checksum="$(awk '{print $1}' dist/DiskSwell.pkg.sha256)"
+          mkdir -p homebrew-tap/Casks
+          sed -e "s/@VERSION@/$VERSION/g" -e "s/@SHA256@/$checksum/g" \
+            .github/diskswell.rb.template > homebrew-tap/Casks/diskswell.rb
+
+          git -C homebrew-tap config user.name github-actions[bot]
+          git -C homebrew-tap config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git -C homebrew-tap add Casks/diskswell.rb
+          if ! git -C homebrew-tap diff --cached --quiet; then
+            git -C homebrew-tap commit -m "chore: update DiskSwell to $VERSION"
+            git -C homebrew-tap push
+          fi
+
+      - name: Publish GitHub release
+        shell: bash
+        run: |
+          if [[ "$(gh release view "$TAG_NAME" --json isDraft --jq '.isDraft')" == true ]]; then
+            gh release edit "$TAG_NAME" --draft=false
+          fi
+
+      - name: Remove temporary credentials
+        if: always()
+        shell: bash
+        run: |
+          security delete-keychain "$RUNNER_TEMP/DiskSwell.keychain-db" 2>/dev/null || true
+          rm -f "$RUNNER_TEMP/DeveloperIDApplication.p12" "$RUNNER_TEMP/DeveloperIDInstaller.p12" "$RUNNER_TEMP/AuthKey.p8"
