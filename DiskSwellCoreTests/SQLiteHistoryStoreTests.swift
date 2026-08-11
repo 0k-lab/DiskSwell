@@ -3,6 +3,25 @@ import SQLite3
 import Testing
 @testable import DiskSwellCore
 
+@Test("SQLite history is private to the current user")
+func sqliteHistoryPermissions() async throws {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent("DiskSwellSQLiteTests-\(UUID().uuidString)", isDirectory: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    try FileManager.default.setAttributes([.posixPermissions: 0o777], ofItemAtPath: directory.path)
+    let url = directory.appendingPathComponent("history.sqlite3")
+
+    try await SQLiteHistoryStore(url: url).prepare()
+
+    let directoryMode = try #require(FileManager.default.attributesOfItem(atPath: directory.path)[.posixPermissions] as? NSNumber)
+    #expect(directoryMode.intValue & 0o777 == 0o700)
+    for file in [url, URL(fileURLWithPath: url.path + "-wal"), URL(fileURLWithPath: url.path + "-shm")]
+    where FileManager.default.fileExists(atPath: file.path) {
+        let mode = try #require(FileManager.default.attributesOfItem(atPath: file.path)[.posixPermissions] as? NSNumber)
+        #expect(mode.intValue & 0o777 == 0o600)
+    }
+}
+
 @Test("SQLite history removes, downsamples, and deduplicates samples")
 func sqliteRetention() async throws {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent("DiskSwellSQLiteTests-\(UUID().uuidString)", isDirectory: true)

@@ -1,14 +1,28 @@
 # DiskSwell
 
-DiskSwell is a native macOS menu bar utility that detects abnormal disk-usage growth. It is detection-only: it never deletes files, truncates WALs, checkpoints databases, or terminates applications.
+DiskSwell is a native macOS menu bar utility that detects abnormal disk-usage growth, shows the affected file or folder, and identifies the likely application when possible. It is detection-only: it never deletes files, truncates WALs, checkpoints databases, or terminates applications.
 
-Safari and WebKit can occasionally accumulate unexpectedly large website-storage write-ahead logs. DiskSwell exists to surface that kind of runaway growth before it silently consumes the remaining disk space, while remaining useful for unusually fast growth elsewhere in monitored user folders.
+## Why it exists
+
+DiskSwell began after Safari silently grew a WebKit SQLite write-ahead log to **51 GB** on my Mac. Free space kept disappearing, but macOS did not clearly show what was growing or which app was responsible. I wanted a small monitor that would catch the next runaway file early, show its path and likely owner, and leave cleanup decisions to me.
 
 DiskSwell processes monitoring data locally with no telemetry, analytics, accounts, or uploads. Networking is used only for optional update checks and user-approved downloads from GitHub Releases. See [PRIVACY.md](PRIVACY.md), [SECURITY.md](SECURITY.md), and [CONTRIBUTING.md](CONTRIBUTING.md).
 
 <div align="center">
   <img src="docs/images/diskswell-menu.png" width="386" alt="DiskSwell showing a current application alert and a recent filesystem detection">
 </div>
+
+## What it does
+
+- Watches bounded user locations using native FSEvents; it never scans the whole disk.
+- Detects sudden growth, slow multi-day growth, large Safari/WebKit WAL files, and low free space.
+- Shows the likely app, main path, size, growth, and timestamps, with **Show in Finder** for inspection.
+- Runs quietly from the menu bar with local SQLite history and optional native notifications.
+- Never cleans, terminates, uploads, or modifies monitored data.
+
+## Problems it helps identify
+
+DiskSwell can help when **Mac disk space keeps disappearing**, a **Safari or WebKit WAL file grows to tens of gigabytes**, an **application container rapidly expands**, or you need to find **which app is creating a large file on macOS**. It monitors growth over time rather than acting as another static disk-usage browser.
 
 ## Installation
 
@@ -20,7 +34,7 @@ brew install --cask kricha-lab/tap/diskswell
 
 Installed copies check GitHub Releases at most once per day by default. This can be disabled in Settings; manual checks remain available. DiskSwell downloads an update only after confirmation, verifies its SHA-256, and opens the signed package in macOS Installer.
 
-Until the first release is published, build it from source with the Release command under [Development](#development), move `DiskSwell.app` to `/Applications`, and launch it once from Finder. Do not distribute the local ad-hoc build.
+For local development, build from source with the Release command under [Development](#development). Local ad-hoc builds are for testing only and should not be redistributed.
 
 ## Monitoring architecture
 

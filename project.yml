@@ -39,6 +39,7 @@ targets:
     sources: DiskSwell
     dependencies:
       - target: DiskSwellCore
+      - sdk: Security.framework
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.diskswell.DiskSwell

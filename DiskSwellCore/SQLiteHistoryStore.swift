@@ -30,7 +30,9 @@ public actor SQLiteHistoryStore: HistoryStore {
 
     public func prepare() throws {
         guard database == nil else { return }
-        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let directory = url.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path)
         var opened: OpaquePointer?
         guard sqlite3_open_v2(url.path, &opened, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX, nil) == SQLITE_OK, let opened else {
             let message = opened.map { String(cString: sqlite3_errmsg($0)) } ?? "unknown error"
@@ -39,6 +41,7 @@ public actor SQLiteHistoryStore: HistoryStore {
         }
         connection = SQLiteConnection(opened)
         do {
+            try secureHistoryFiles()
             try execute("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA foreign_keys=ON; PRAGMA auto_vacuum=INCREMENTAL; PRAGMA wal_autocheckpoint=256;")
             let pageSize = max(1, try scalar("PRAGMA page_size;"))
             try execute("PRAGMA max_page_count=\(Self.hardLimitBytes / pageSize);")
@@ -83,9 +86,17 @@ public actor SQLiteHistoryStore: HistoryStore {
             if try !columnExists("anomaly", "item_count_growth") { try execute("ALTER TABLE anomaly ADD COLUMN item_count_growth INTEGER NOT NULL DEFAULT 0;") }
             if try !columnExists("anomaly", "approximate") { try execute("ALTER TABLE anomaly ADD COLUMN approximate INTEGER NOT NULL DEFAULT 0;") }
             try execute("PRAGMA user_version=3;")
+            try secureHistoryFiles()
         } catch {
             connection = nil
             throw error
+        }
+    }
+
+    private func secureHistoryFiles() throws {
+        for file in [url, URL(fileURLWithPath: url.path + "-wal"), URL(fileURLWithPath: url.path + "-shm")]
+        where FileManager.default.fileExists(atPath: file.path) {
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
         }
     }
 
