@@ -41,3 +41,12 @@ public enum ReleaseChecksum {
         return nil
     }
 }
+
+public enum InstallerPackageTrust {
+    public static func matches(_ pkgutilOutput: String, teamID: String) -> Bool {
+        guard pkgutilOutput.contains("Signed with a trusted timestamp") else { return false }
+        return pkgutilOutput.split(separator: "\n").contains {
+            $0.contains("Developer ID Installer:") && $0.hasSuffix("(\(teamID))")
+        }
+    }
+}

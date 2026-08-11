@@ -50,6 +50,11 @@ func updateReleaseValidation() {
     let digest = String(repeating: "a", count: 64)
     #expect(ReleaseChecksum.sha256(in: "\(digest)  DiskSwell.pkg\n", for: "DiskSwell.pkg") == digest)
     #expect(ReleaseChecksum.sha256(in: "\(digest)  Other.pkg\n", for: "DiskSwell.pkg") == nil)
+
+    let signature = "Signed with a trusted timestamp\n1. Developer ID Installer: DiskSwell (ABCDE12345)"
+    #expect(InstallerPackageTrust.matches(signature, teamID: "ABCDE12345"))
+    #expect(!InstallerPackageTrust.matches(signature, teamID: "WRONG12345"))
+    #expect(!InstallerPackageTrust.matches(signature.replacing("Signed with a trusted timestamp", with: "No trusted timestamp"), teamID: "ABCDE12345"))
 }
 
 @MainActor

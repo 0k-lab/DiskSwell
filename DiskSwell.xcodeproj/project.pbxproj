@@ -30,6 +30,7 @@
 		BCA3BBB6B311C8D5CC13F143 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6C4863FD45DEE398653DFFD4 /* Assets.xcassets */; };
 		C18513B8791E5A3F38CFE94B /* MonitoringModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AF08CBF4037BC57DBCE3305 /* MonitoringModels.swift */; };
 		D7652A82DF160FD2E8D244C7 /* FileInspector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17EF98A5B62DE3EF70CD475E /* FileInspector.swift */; };
+		DA012D5B5866729DAF8B2718 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5CD60511DAAC9EE6ABBFB03A /* Security.framework */; };
 		E2E5BA437AB70E8E2FE7FBC7 /* SettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E743383D4BCD57BFC3AC2A /* SettingsTests.swift */; };
 		FE94952C50FB42FA7C9EF567 /* DiskSwellCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 97EC8A54917F05A93F5E1A2D /* DiskSwellCore.framework */; };
 /* End PBXBuildFile section */
@@ -85,6 +86,7 @@
 		4EF0CAA67F4578A2492E5AAF /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 		54E743383D4BCD57BFC3AC2A /* SettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTests.swift; sourceTree = "<group>"; };
 		553CE79E3F3AEA542D0C05F9 /* FSEventsMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FSEventsMonitor.swift; sourceTree = "<group>"; };
+		5CD60511DAAC9EE6ABBFB03A /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		5FEA39D244158C2CF8BFDDE9 /* MonitoringEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonitoringEngineTests.swift; sourceTree = "<group>"; };
 		6A97BF740291427EF573E680 /* Detection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Detection.swift; sourceTree = "<group>"; };
 		6C4863FD45DEE398653DFFD4 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -117,6 +119,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				FE94952C50FB42FA7C9EF567 /* DiskSwellCore.framework in Frameworks */,
+				DA012D5B5866729DAF8B2718 /* Security.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -146,6 +149,7 @@
 			isa = PBXGroup;
 			children = (
 				4EF0CAA67F4578A2492E5AAF /* libsqlite3.tbd */,
+				5CD60511DAAC9EE6ABBFB03A /* Security.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";

@@ -2,6 +2,7 @@ import AppKit
 import CryptoKit
 import DiskSwellCore
 import Foundation
+import Security
 import SwiftUI
 
 @MainActor
@@ -255,6 +256,7 @@ struct UpdateService: Sendable {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
         let package = directory.appendingPathComponent("DiskSwell.pkg")
         try FileManager.default.copyItem(at: downloaded, to: package)
+        try verifyPublisher(of: package)
         return package
     }
 
@@ -274,6 +276,50 @@ struct UpdateService: Sendable {
         url.scheme == "https"
             && url.host?.lowercased() == "github.com"
             && url.path.hasPrefix("/kricha-lab/DiskSwell/releases/download/")
+    }
+
+    private func verifyPublisher(of package: URL) throws {
+        let teamID = try signingTeamIdentifier()
+        let signature = try run("/usr/sbin/pkgutil", arguments: ["--check-signature", package.path])
+        guard signature.status == 0,
+              InstallerPackageTrust.matches(signature.output, teamID: teamID) else {
+            throw UpdateError.untrustedPublisher
+        }
+        let assessment = try run("/usr/sbin/spctl", arguments: ["--assess", "--type", "install", "--verbose=2", package.path])
+        guard assessment.status == 0 else { throw UpdateError.untrustedPublisher }
+    }
+
+    private func signingTeamIdentifier() throws -> String {
+        var dynamicCode: SecCode?
+        guard SecCodeCopySelf([], &dynamicCode) == errSecSuccess, let dynamicCode else {
+            throw UpdateError.untrustedRunningApp
+        }
+        var staticCode: SecStaticCode?
+        guard SecCodeCopyStaticCode(dynamicCode, [], &staticCode) == errSecSuccess, let staticCode else {
+            throw UpdateError.untrustedRunningApp
+        }
+        let validationFlags = SecCSFlags(rawValue: kSecCSStrictValidate | kSecCSCheckAllArchitectures)
+        guard SecStaticCodeCheckValidity(staticCode, validationFlags, nil) == errSecSuccess else {
+            throw UpdateError.untrustedRunningApp
+        }
+        var information: CFDictionary?
+        guard SecCodeCopySigningInformation(staticCode, SecCSFlags(rawValue: kSecCSSigningInformation), &information) == errSecSuccess,
+              let teamID = (information as? [CFString: Any])?[kSecCodeInfoTeamIdentifier] as? String,
+              !teamID.isEmpty else { throw UpdateError.untrustedRunningApp }
+        return teamID
+    }
+
+    private func run(_ executable: String, arguments: [String]) throws -> (status: Int32, output: String) {
+        let process = Process()
+        let output = Pipe()
+        process.executableURL = URL(fileURLWithPath: executable)
+        process.arguments = arguments
+        process.environment = ["LC_ALL": "C"]
+        process.standardOutput = output
+        process.standardError = output
+        do { try process.run() } catch { throw UpdateError.cannotVerifyInstaller }
+        process.waitUntilExit()
+        return (process.terminationStatus, String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self))
     }
 }
 
@@ -313,6 +359,9 @@ private enum UpdateError: LocalizedError {
     case invalidChecksum
     case invalidPackage
     case checksumMismatch
+    case untrustedRunningApp
+    case untrustedPublisher
+    case cannotVerifyInstaller
     case cannotOpenInstaller
 
     var errorDescription: String? {
@@ -324,6 +373,9 @@ private enum UpdateError: LocalizedError {
         case .invalidChecksum: "The update checksum is invalid."
         case .invalidPackage: "The downloaded installer is invalid."
         case .checksumMismatch: "The downloaded installer failed verification and was not opened."
+        case .untrustedRunningApp: "Automatic installation requires an official signed DiskSwell build."
+        case .untrustedPublisher: "The downloaded installer is not trusted as an official DiskSwell update and was not opened."
+        case .cannotVerifyInstaller: "macOS could not verify the downloaded installer."
         case .cannotOpenInstaller: "macOS could not open the downloaded installer."
         }
     }

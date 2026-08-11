@@ -18,7 +18,7 @@ DiskSwell minimizes its attack surface:
 
 - all monitoring and history processing is local;
 - networking is limited to optional update checks and user-approved installer downloads from the fixed DiskSwell GitHub Releases endpoints;
-- the updater verifies the published SHA-256 before handing the Developer ID-signed and notarized package to macOS Installer;
+- the updater verifies the published SHA-256, requires the installer's Developer ID team to match the running app, and asks Gatekeeper to assess the package before opening it;
 - the app contains no telemetry, analytics, accounts, or DiskSwell-operated cloud service;
 - it runs without a privileged helper or daemon;
 - it uses the current user's permissions and does not automatically request Full Disk Access;
