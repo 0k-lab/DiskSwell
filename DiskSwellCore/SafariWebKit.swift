@@ -77,7 +77,7 @@ public enum SafariWebKit {
     }
 }
 
-enum SourceAttribution {
+public enum SourceAttribution {
     static func source(for path: String) -> SourceClassification {
         source(for: path, applicationName: installedApplicationName)
     }
@@ -87,16 +87,9 @@ enum SourceAttribution {
         if SafariWebKit.isWebsiteData(path: path) {
             return .safariWebKit(origin: SafariWebKit.origin(forPath: path))
         }
-        if path.contains("/Library/Developer/Xcode/") {
-            return .application(name: "Xcode", confidence: .verified)
-        }
-        if let identifier = component(after: "/Library/Containers/", in: path) {
-            return .application(name: safeName(applicationName(identifier)) ?? identifier, confidence: .verified)
-        }
-        if let identifier = component(after: "/Library/Group Containers/", in: path) {
-            let candidate = groupBundleIdentifier(identifier)
-            let name = safeName(applicationName(candidate)) ?? friendlyIdentifier(candidate)
-            return .application(name: name, confidence: .likely)
+        if let identifier = applicationBundleIdentifier(for: path) {
+            let confidence: AttributionConfidence = path.contains("/Library/Group Containers/") ? .likely : .verified
+            return .application(name: safeName(applicationName(identifier)) ?? friendlyIdentifier(identifier), confidence: confidence)
         }
         if let name = component(after: "/Library/Application Support/", in: path).flatMap(safeName) {
             return .application(name: name, confidence: .likely)
@@ -105,6 +98,14 @@ enum SourceAttribution {
             return .application(name: agent, confidence: .likely)
         }
         return .generic
+    }
+
+    public static func applicationBundleIdentifier(for path: String) -> String? {
+        let path = PathRules.normalize(path)
+        if SafariWebKit.isWebsiteData(path: path) { return "com.apple.Safari" }
+        if path.contains("/Library/Developer/Xcode/") { return "com.apple.dt.Xcode" }
+        if let identifier = component(after: "/Library/Containers/", in: path) { return identifier }
+        return component(after: "/Library/Group Containers/", in: path).map(groupBundleIdentifier)
     }
 
     static func quarantineAgent(in value: String) -> String? {

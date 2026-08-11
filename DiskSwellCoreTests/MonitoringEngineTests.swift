@@ -478,6 +478,8 @@ func sourceAttributionConfidence() {
     #expect(SourceAttribution.source(for: "/tmp/home/Library/Developer/Xcode/DerivedData/App", applicationName: resolve) == .application(name: "Xcode", confidence: .verified))
     #expect(SourceAttribution.source(for: "/tmp/home/Library/Containers/com.example.Editor/Data/file", applicationName: resolve) == .application(name: "Example Editor", confidence: .verified))
     #expect(SourceAttribution.source(for: "/tmp/home/Library/Group Containers/6N38VWS5BX.ru.keepcoder.Telegram/stable", applicationName: resolve) == .application(name: "Telegram", confidence: .likely))
+    #expect(SourceAttribution.applicationBundleIdentifier(for: "/tmp/home/Library/Containers/com.example.Editor/Data/file") == "com.example.Editor")
+    #expect(SourceAttribution.applicationBundleIdentifier(for: "/tmp/home/Library/Group Containers/6N38VWS5BX.ru.keepcoder.Telegram/stable") == "ru.keepcoder.Telegram")
     #expect(SourceAttribution.source(for: "/tmp/home/Library/Application Support/Example Cache/data", applicationName: resolve) == .application(name: "Example Cache", confidence: .likely))
     #expect(SourceAttribution.quarantineAgent(in: "0081;66ac8f00;Safari;UUID") == "Safari")
     #expect(SourceAttribution.source(for: "/tmp/home/Library/ordinary-file", applicationName: resolve) == .generic)
