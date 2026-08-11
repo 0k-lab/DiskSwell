@@ -41,6 +41,7 @@ jobs:
           -scheme DiskSwell
           -destination 'platform=macOS'
           CODE_SIGNING_ALLOWED=NO
+          SWIFT_ENABLE_BATCH_MODE=NO
           test
 
   release-please:
