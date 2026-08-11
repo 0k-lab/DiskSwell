@@ -26,7 +26,7 @@ Release Please chooses the highest impact among all unreleased commits and group
 3. When that release PR is merged, create a tagged draft GitHub Release.
 4. Import the Developer ID Application and Installer identities into a temporary keychain.
 5. Archive the universal app, sign it, build the signed installer, notarize and staple it, and validate it with Gatekeeper.
-6. Upload `DiskSwell.pkg` and `DiskSwell.pkg.sha256`, update `Casks/diskswell.rb` in `kricha-lab/homebrew-tap`, and publish the GitHub Release.
+6. Upload `DiskSwell.pkg` and `DiskSwell.pkg.sha256`, update `Casks/diskswell.rb` in `0k-lab/homebrew-tap`, and publish the GitHub Release.
 
 Those two asset names and the `vMAJOR.MINOR.PATCH` tag format are also the in-app updater contract; do not rename them without updating the app first.
 
@@ -57,7 +57,7 @@ The package must use the branded icon from `DiskSwell/Assets.xcassets/AppIcon.ap
 The owner-maintained tap installs with:
 
 ```sh
-brew install --cask kricha-lab/tap/diskswell
+brew install --cask 0k-lab/tap/diskswell
 ```
 
 The release workflow rewrites the cask version and SHA-256 before making the draft GitHub Release public. Migration to the official Homebrew cask repository can be considered after the project meets its acceptance requirements.

@@ -26,10 +26,10 @@ DiskSwell can help when **Mac disk space keeps disappearing**, a **Safari or Web
 
 ## Installation
 
-DiskSwell requires macOS 14 or later. Install the signed and notarized package from [GitHub Releases](https://github.com/kricha-lab/DiskSwell/releases), or use the owner-maintained Homebrew tap:
+DiskSwell requires macOS 14 or later. Install the signed and notarized package from [GitHub Releases](https://github.com/0k-lab/DiskSwell/releases), or use the owner-maintained Homebrew tap:
 
 ```sh
-brew install --cask kricha-lab/tap/diskswell
+brew install --cask 0k-lab/tap/diskswell
 ```
 
 Installed copies check GitHub Releases at most once per day by default. This can be disabled in Settings; manual checks remain available. DiskSwell downloads an update only after confirmation, verifies its SHA-256, and opens the signed package in macOS Installer.
