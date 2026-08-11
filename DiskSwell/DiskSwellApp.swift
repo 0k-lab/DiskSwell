@@ -175,11 +175,19 @@ struct DiskSwellApp: App {
 
     private func summary(source: SourceClassification, path: String, size: Int64, status: String?, expanded: Bool) -> some View {
         HStack(spacing: 8) {
-            Image(systemName: sourceSymbol(source))
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(sourceColor(source))
-                .frame(width: 28, height: 28)
-                .background(sourceColor(source).opacity(0.16), in: RoundedRectangle(cornerRadius: 7))
+            Group {
+                if let icon = Self.applicationIcon(for: path) {
+                    Image(nsImage: icon).resizable().scaledToFit()
+                } else {
+                    Image(systemName: sourceSymbol(source))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(sourceColor(source))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(sourceColor(source).opacity(0.16), in: RoundedRectangle(cornerRadius: 7))
+                }
+            }
+            .frame(width: 28, height: 28)
+            .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
                 Text(sourceTitle(source)).fontWeight(.medium).lineLimit(1)
                 Text(PathRules.safeDisplayName(path)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
@@ -195,6 +203,12 @@ struct DiskSwellApp: App {
                 .font(.caption.bold()).foregroundStyle(.secondary).frame(width: 10)
         }
         .contentShape(Rectangle())
+    }
+
+    private static func applicationIcon(for path: String) -> NSImage? {
+        guard let identifier = SourceAttribution.applicationBundleIdentifier(for: path),
+              let application = NSWorkspace.shared.urlForApplication(withBundleIdentifier: identifier) else { return nil }
+        return NSWorkspace.shared.icon(forFile: application.path)
     }
 
     private func sourceTitle(_ source: SourceClassification) -> String {
