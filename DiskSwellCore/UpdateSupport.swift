@@ -42,6 +42,20 @@ public enum ReleaseChecksum {
     }
 }
 
+public enum DiskSwellReleaseLocation {
+    public static let owners = ["0k-lab", "kricha-lab"]
+
+    public static var latestReleaseURLs: [URL] {
+        owners.compactMap { URL(string: "https://api.github.com/repos/\($0)/DiskSwell/releases/latest") }
+    }
+
+    public static func isTrustedAssetURL(_ url: URL) -> Bool {
+        url.scheme == "https"
+            && url.host?.lowercased() == "github.com"
+            && owners.contains { url.path.hasPrefix("/\($0)/DiskSwell/releases/download/") }
+    }
+}
+
 public enum InstallerPackageTrust {
     public static func matches(_ pkgutilOutput: String, teamID: String) -> Bool {
         guard pkgutilOutput.contains("Signed with a trusted timestamp") else { return false }

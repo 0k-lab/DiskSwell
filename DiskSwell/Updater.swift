@@ -218,19 +218,21 @@ struct UpdateService: Sendable {
     }
 
     func latestRelease() async throws -> UpdateRelease {
-        let url = URL(string: "https://api.github.com/repos/kricha-lab/DiskSwell/releases/latest")!
-        let (data, response) = try await URLSession.shared.data(for: request(url))
-        if (response as? HTTPURLResponse)?.statusCode == 404 { throw UpdateError.noPublishedRelease }
-        try validate(response)
-        let payload = try JSONDecoder().decode(GitHubRelease.self, from: data)
-        guard let version = ReleaseVersion(payload.tagName) else { throw UpdateError.invalidRelease }
-        guard let package = payload.assets.first(where: { $0.name == "DiskSwell.pkg" }),
-              let checksum = payload.assets.first(where: { $0.name == "DiskSwell.pkg.sha256" }),
-              (1...100_000_000).contains(package.size),
-              (1...4_096).contains(checksum.size),
-              isTrustedAssetURL(package.downloadURL),
-              isTrustedAssetURL(checksum.downloadURL) else { throw UpdateError.missingAssets }
-        return UpdateRelease(version: version, packageURL: package.downloadURL, checksumURL: checksum.downloadURL)
+        for url in DiskSwellReleaseLocation.latestReleaseURLs {
+            let (data, response) = try await URLSession.shared.data(for: request(url))
+            if (response as? HTTPURLResponse)?.statusCode == 404 { continue }
+            try validate(response)
+            let payload = try JSONDecoder().decode(GitHubRelease.self, from: data)
+            guard let version = ReleaseVersion(payload.tagName) else { throw UpdateError.invalidRelease }
+            guard let package = payload.assets.first(where: { $0.name == "DiskSwell.pkg" }),
+                  let checksum = payload.assets.first(where: { $0.name == "DiskSwell.pkg.sha256" }),
+                  (1...100_000_000).contains(package.size),
+                  (1...4_096).contains(checksum.size),
+                  DiskSwellReleaseLocation.isTrustedAssetURL(package.downloadURL),
+                  DiskSwellReleaseLocation.isTrustedAssetURL(checksum.downloadURL) else { throw UpdateError.missingAssets }
+            return UpdateRelease(version: version, packageURL: package.downloadURL, checksumURL: checksum.downloadURL)
+        }
+        throw UpdateError.noPublishedRelease
     }
 
     func downloadAndVerify(_ release: UpdateRelease) async throws -> URL {
@@ -270,12 +272,6 @@ struct UpdateService: Sendable {
     private func validate(_ response: URLResponse) throws {
         guard let response = response as? HTTPURLResponse,
               (200..<300).contains(response.statusCode) else { throw UpdateError.networkResponse }
-    }
-
-    private func isTrustedAssetURL(_ url: URL) -> Bool {
-        url.scheme == "https"
-            && url.host?.lowercased() == "github.com"
-            && url.path.hasPrefix("/kricha-lab/DiskSwell/releases/download/")
     }
 
     private func verifyPublisher(of package: URL) throws {

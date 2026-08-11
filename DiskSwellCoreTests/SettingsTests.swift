@@ -57,6 +57,18 @@ func updateReleaseValidation() {
     #expect(!InstallerPackageTrust.matches(signature.replacing("Signed with a trusted timestamp", with: "No trusted timestamp"), teamID: "ABCDE12345"))
 }
 
+@Test("Release migration prefers the new organization and trusts both namespaces")
+func releaseOrganizationMigration() {
+    #expect(DiskSwellReleaseLocation.latestReleaseURLs.map(\.absoluteString) == [
+        "https://api.github.com/repos/0k-lab/DiskSwell/releases/latest",
+        "https://api.github.com/repos/kricha-lab/DiskSwell/releases/latest",
+    ])
+    #expect(DiskSwellReleaseLocation.isTrustedAssetURL(URL(string: "https://github.com/0k-lab/DiskSwell/releases/download/v1.2.3/DiskSwell.pkg")!))
+    #expect(DiskSwellReleaseLocation.isTrustedAssetURL(URL(string: "https://github.com/kricha-lab/DiskSwell/releases/download/v1.2.3/DiskSwell.pkg")!))
+    #expect(!DiskSwellReleaseLocation.isTrustedAssetURL(URL(string: "https://github.com/ok-lab/DiskSwell/releases/download/v1.2.3/DiskSwell.pkg")!))
+    #expect(!DiskSwellReleaseLocation.isTrustedAssetURL(URL(string: "http://github.com/0k-lab/DiskSwell/releases/download/v1.2.3/DiskSwell.pkg")!))
+}
+
 @MainActor
 @Test("Launch at Login reports native state and errors without mutating the machine")
 func launchAtLoginBoundary() {
